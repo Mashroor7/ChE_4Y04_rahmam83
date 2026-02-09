@@ -14,17 +14,23 @@ Place the H5 file in:
 data/raw/tep_data.h5
 
 ## Pipeline Overview
-1) Load and label data from H5
-    - Use load_data.py
-2) Apply feature engineering
+1) Load and label data from H5 (load_data.py)
+    - Loads "processdata" and "additional_meas" into a split of 30, 10, 10 runs for training, validation, and testing set.
+    - Label data with header row from "Processdata_Labels" and "Additional_Meas_Labels"
+    - Add target column for classifcation of timestep: healthy (0), IDV(X) (X)
+        -Healthy data is indices 0-599
+        -Faulty data is indices 600-2001
+2) Perform pre-processing and feature engineering
     - Feature engineering
+        -Drop features with zero variance
+        -Drop features corresponding with analyzer measurements (Not realistic to have in time for real-life application of model)
     - Scaling (Z-scale)
-3) Scale features
-4) Create train/val/test splits
-5) Generate sliding windows
-6) Train model
-7) Hyperparameter tuning
-8) Evaluate performance
+        -Perform sclaing on training dataset with transformation applied to validation and testing dataset
+3) Generate sliding windows
+    -Create sliding windows of length 5 with a stride of 1
+4) Train model
+5) Hyperparameter tuning
+6) Evaluate performance
 
 ## How to Run
 python scripts/train.py
