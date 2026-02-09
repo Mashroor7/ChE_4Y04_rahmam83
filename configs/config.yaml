@@ -1,0 +1,19 @@
+data:
+  h5_path: 'C:\Users\Arnab\OneDrive - McMaster University\Desktop\Documents\University\5th Year\ChE 4Y04\My Work\Data\TEP_Model1.h5'
+  model_group: Model1
+  selection:
+    group: SingleFault
+    status: SimulationCompleted
+    magnitude_group: Model1_IDVInfo_1_100
+    runs_per_idv: 50
+
+splits:
+  train_runs: 30
+  val_runs: 10
+  test_runs: 10
+  seed: 42
+
+output:
+  manifest_path: data/processed/manifests/singlefault_idvinfo_1_100_manifest.json
+  columns_path: data/processed/labels/feature_columns.json
+  materialized_runs_dir: data/processed/runs
