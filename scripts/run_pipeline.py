@@ -10,16 +10,23 @@ Author: [Your Name]
 Created: February 2026
 """
 
+import sys
 from pathlib import Path
+
+# Add project root to Python path
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT))
+
+
 from src.preprocessing.tep_data_processor import TEPDataProcessor
 from src.preprocessing.tep_feature_engineering import apply_feature_engineering
 from src.preprocessing.tep_data_scaler import scale_dataframes
-from config_loader import load_config
+from configs.config_loader import load_config
 import pandas as pd
 import argparse
 
 
-def run_complete_pipeline(config_path: str = 'config.yaml'):
+def run_complete_pipeline(config_path: str = 'configs/config.yaml'):
     """
     Execute the complete TEP data processing pipeline using settings from config.yaml.
     
@@ -188,7 +195,7 @@ def run_complete_pipeline(config_path: str = 'config.yaml'):
     print(f"    - {fe_save_path.name}")
     print(f"    - {scaler_save_path.name}")
     
-    if save_dataframes:
+    if config.save_dataframes:
         print(f"\n  Final DataFrames (ready for modeling):")
         print(f"    - train_final.pkl")
         print(f"    - val_final.pkl")
@@ -230,8 +237,8 @@ Example usage:
     parser.add_argument(
         '--config', 
         type=str, 
-        default='config.yaml',
-        help='Path to config.yaml file (default: config.yaml)'
+        default='configs/config.yaml',
+        help='Path to config.yaml file (default: configs/config.yaml)'
     )
     
     args = parser.parse_args()

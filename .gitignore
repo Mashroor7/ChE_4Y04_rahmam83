@@ -4,9 +4,6 @@ __pycache__/
 
 # Data files
 data/
-*.csv
-*.xlsx
-*.h5
 
 # Model files
 *.pt

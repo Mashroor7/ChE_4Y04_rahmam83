@@ -2,8 +2,8 @@
 
 # Data Paths
 data:
-  raw_source: 'C:\path\to\TEP_Mode1.h5'  # UPDATE THIS: Path to your 23GB source file
-  output_dir: 'C:\path\to\output'        # UPDATE THIS: Where to save processed data
+  raw_source: 'data\raw\TEP_Mode1.h5'  # UPDATE THIS: Path to your 23GB source file
+  output_dir: 'data\processed'        # UPDATE THIS: Where to save processed data
 
 # Random Seed
 random_seed: 42
