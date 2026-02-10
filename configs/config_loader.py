@@ -126,6 +126,21 @@ class Config:
         """Number of test runs."""
         return self._config.get('splits', {}).get('test_runs', 10)
     
+    @property
+    def window_size(self) -> int:
+        """Number of timesteps per window."""
+        return self._config.get("windowing", {}).get("window_size", 5)
+
+    @property
+    def stride(self) -> int:
+        """Step size between windows."""
+        return self._config.get("windowing", {}).get("stride", 1)
+
+    @property
+    def save_metadata(self) -> bool:
+        """Whether to save window metadata."""
+        return self._config.get("windowing", {}).get("save_metadata", True)
+    
     def display(self):
         """Display current configuration."""
         print("\n" + "="*70)
@@ -154,6 +169,10 @@ class Config:
         print(f"  Train: {self.train_runs}")
         print(f"  Val: {self.val_runs}")
         print(f"  Test: {self.test_runs}")
+        print(f"\nWindowing:")
+        print(f"  Window size: {self.window_size}")
+        print(f"  Stride: {self.stride}")
+        print(f"  Save metadata: {self.save_metadata}")
         print("="*70 + "\n")
     
     def get(self, key: str, default: Any = None) -> Any:

@@ -95,3 +95,9 @@ splits:
 scaling:
   method: 'standard'          # Options: 'standard', 'minmax', 'robust'
   keep_unscaled: ['Time']     # Columns to keep unscaled
+
+# Windowing Settings
+windowing:
+  window_size: 5              # Number of timesteps per window
+  stride: 1                   # Step size between windows
+  save_metadata: true         # Save Run_ID, start_idx, end_idx per window
