@@ -7,11 +7,10 @@ tests/        → validation and unit tests
 requirements.txt → Python dependencies  
 
 ## Setup
-pip install -r requirements.txt
+1) Install dependencies: python -m pip install -r requirements.txt
+2) Place the raw H5 file in: data/raw/tep_data.h5
+2) Edit config.yaml
 
-## Data Setup
-Place the H5 file in:
-data/raw/tep_data.h5
 
 ## Pipeline Overview
 1) Load and label data from H5 (load_data.py)
@@ -31,6 +30,3 @@ data/raw/tep_data.h5
 4) Train model
 5) Hyperparameter tuning
 6) Evaluate performance
-
-## How to Run
-python scripts/train.py
