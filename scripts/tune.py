@@ -184,7 +184,7 @@ def main():
     y_test = torch.tensor(test['y'], dtype=torch.long)
 
     input_dim = X_train.shape[1]
-    output_dim = len(torch.unique(torch.cat([y_train, y_val, y_test])))
+    output_dim = int(torch.cat([y_train, y_val, y_test]).max().item()) + 1
 
     print(f"  Train: {X_train.shape[0]:,} windows | Val: {X_val.shape[0]:,} | "
           f"Test: {X_test.shape[0]:,}")
@@ -213,6 +213,7 @@ def main():
     # 3. Optuna objective
     # ------------------------------------------------------------------
     def objective(trial):
+        print(f"\n  --- Trial {trial.number + 1}/{config.n_trials} ---")
         torch.manual_seed(seed)
 
         # Universal params
@@ -228,6 +229,9 @@ def main():
 
         # Variant-specific params
         variant_kwargs = sample_variant_params(trial, model_name, ss)
+
+        print(f"    Params: hidden_dim={hidden_dim}, hidden_layers={hidden_layers}, "
+              f"lr={lr:.2e}, {variant_kwargs}")
 
         # Build model
         ModelClass = MODEL_REGISTRY[model_name]
@@ -245,6 +249,8 @@ def main():
             lr=lr, max_epochs=max_epochs, patience=patience,
             device=device, seed=seed, verbose=False,
         )
+
+        print(f"    Result: val_acc={val_acc:.4f}")
 
         return val_acc
 
