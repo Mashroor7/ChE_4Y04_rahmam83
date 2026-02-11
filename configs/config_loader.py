@@ -141,6 +141,30 @@ class Config:
         """Whether to save window metadata."""
         return self._config.get("windowing", {}).get("save_metadata", True)
     
+    @property
+    def n_trials(self) -> int:
+        return self._config.get('tuning', {}).get('n_trials', 50)
+
+    @property
+    def results_dir(self) -> str:
+        return self._config.get('models', {}).get('weights_dir', 'results')
+
+    @property
+    def tuning_search_space(self) -> dict:
+        return self._config.get('tuning', {}).get('search_space', {})
+
+    @property
+    def batch_size(self) -> int:
+        return self._config.get('training', {}).get('batch_size', 256)
+
+    @property
+    def max_epochs(self) -> int:
+        return self._config.get('training', {}).get('max_epochs', 50)
+
+    @property
+    def early_stopping_patience(self) -> int:
+        return self._config.get('training', {}).get('early_stopping_patience', 5)
+    
     def display(self):
         """Display current configuration."""
         print("\n" + "="*70)
