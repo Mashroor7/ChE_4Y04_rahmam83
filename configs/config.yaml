@@ -108,13 +108,13 @@ models:
 
 # Training settings
 training:
-  batch_size: 256           # Fixed — not tuned
+  batch_size: 512           # Fixed — not tuned
   max_epochs: 50            # Maximum epochs (early stopping may cut short)
   early_stopping_patience: 5
 
 # Tuning settings
 tuning:
-  n_trials: 50              # Number of Optuna trials per variant
+  n_trials: 30              # Number of Optuna trials per variant
   optimize_metric: 'val_accuracy'
   direction: 'maximize'
 
@@ -124,8 +124,8 @@ tuning:
       min: 1
       max: 3
     hidden_dim:
-      min: 32
-      max: 256
+      min: 64
+      max: 128
     learning_rate:
       min: 1.0e-4
       max: 1.0e-2
@@ -139,7 +139,7 @@ tuning:
     # FourierKAN
     gridsize:
       min: 4
-      max: 16
+      max: 12
 
     smooth_initialization:
       choices: [true, false]
@@ -147,7 +147,7 @@ tuning:
     # FastKAN
     num_grids:
       min: 4
-      max: 16
+      max: 12
 
     grid_min:
       min: -3.0
@@ -160,7 +160,7 @@ tuning:
     # EfficientKAN
     grid_size:
       min: 4
-      max: 16
+      max: 12
 
     spline_order:
       choices: [2, 3, 4]
