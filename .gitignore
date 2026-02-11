@@ -9,7 +9,6 @@ data/
 *.pt
 *.pth
 *.h5
-models/
 
 # Notebooks checkpoints
 .ipynb_checkpoints/
