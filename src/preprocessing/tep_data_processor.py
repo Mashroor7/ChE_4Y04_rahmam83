@@ -199,7 +199,21 @@ class TEPDataProcessor:
             
             # Load column names from Feature_Labels
             feature_labels = f['Feature_Labels'][:].astype(str)
-            print(f"✓ Loaded {len(feature_labels)} feature labels")
+            
+            # Deduplicate column names (processdata and additional_meas
+            # share some names like 'A Feed', 'E Feed', 'A and C Feed')
+            cols = [str(c) for c in feature_labels]  # convert all to Python str first
+            seen = {}
+            for i, col in enumerate(cols):
+                if col in seen:
+                    seen[col] += 1
+                    cols[i] = f"{col}_{seen[col]}"
+                else:
+                    seen[col] = 0
+            feature_labels = cols
+            
+            n_dupes = sum(1 for c in feature_labels if '_' in c and c.rsplit('_', 1)[-1].isdigit())
+            print(f"✓ Loaded {len(feature_labels)} feature labels ({n_dupes} duplicates renamed)")
             
             # List to store all DataFrames
             dataframes_list = []
