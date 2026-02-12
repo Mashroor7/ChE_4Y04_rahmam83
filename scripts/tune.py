@@ -3,7 +3,6 @@
 Optuna hyperparameter tuning for KAN variants on TEP fault detection.
 
 Usage:
-    python scripts/tune.py --model efficient_kan
     python scripts/tune.py --model wavelet_kan --config configs/config.yaml
 """
 
