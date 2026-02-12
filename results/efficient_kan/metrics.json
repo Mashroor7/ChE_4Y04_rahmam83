@@ -1,0 +1,6 @@
+{
+  "test_accuracy": 0.9241899886867339,
+  "val_accuracy": 0.9246703388415958,
+  "n_trials": 30,
+  "best_trial": 11
+}
