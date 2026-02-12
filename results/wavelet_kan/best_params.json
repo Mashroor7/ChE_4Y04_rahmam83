@@ -1,0 +1,6 @@
+{
+  "hidden_layers": 1,
+  "hidden_dim": 75,
+  "lr": 0.0001512038039636463,
+  "wavelet_type": "dog"
+}

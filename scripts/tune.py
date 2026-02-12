@@ -258,8 +258,9 @@ def main():
     # 4. Run Optuna study with SQLite persistence
     # ------------------------------------------------------------------
     results_root = Path(config.results_dir)
-    results_root.mkdir(parents=True, exist_ok=True)
-    storage_path = results_root / 'optuna_studies.db'
+    out_dir = results_root / model_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    storage_path = out_dir / f'{model_name}_study.db'
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -348,9 +349,6 @@ def main():
     # ------------------------------------------------------------------
     # 7. Save all outputs
     # ------------------------------------------------------------------
-    out_dir = results_root / model_name
-    out_dir.mkdir(parents=True, exist_ok=True)
-
     # best_params.json
     params_path = out_dir / 'best_params.json'
     with open(params_path, 'w') as f:

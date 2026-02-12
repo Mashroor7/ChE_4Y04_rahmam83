@@ -4,12 +4,6 @@ __pycache__/
 
 # Data files
 data/
-
-# Model files
-*.pt
-*.pth
-*.h5
-
 # Notebooks checkpoints
 .ipynb_checkpoints/
 
