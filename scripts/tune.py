@@ -10,6 +10,7 @@ import sys
 import json
 import argparse
 import time
+import random
 from pathlib import Path
 
 # Project root on sys.path
@@ -28,6 +29,16 @@ from src.models import MODEL_REGISTRY
 # ======================================================================
 # Helper: variant-specific hyperparameters
 # ======================================================================
+def seed_everything(seed: int):
+    """Set all random seeds for full reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
 VARIANT_PARAMS = {
     'wavelet_kan':   ['wavelet_type'],
     'fourier_kan':   ['gridsize', 'smooth_initialization'],
@@ -154,6 +165,7 @@ def main():
 
     model_name = args.model
     config = load_config(args.config)
+    seed_everything(config.random_seed)
 
     print("=" * 70)
     print(f"  KAN Hyperparameter Tuning — {model_name}")
@@ -190,8 +202,10 @@ def main():
     print(f"  Input dim: {input_dim} | Output classes: {output_dim}")
 
     batch_size = config.batch_size
+    seed = config.random_seed
+    _g = torch.Generator().manual_seed(seed)
     train_loader = DataLoader(TensorDataset(X_train, y_train),
-                              batch_size=batch_size, shuffle=True)
+                              batch_size=batch_size, shuffle=True, generator=_g)
     val_loader = DataLoader(TensorDataset(X_val, y_val),
                             batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(TensorDataset(X_test, y_test),
@@ -206,7 +220,6 @@ def main():
     ss = config.tuning_search_space
     max_epochs = config.max_epochs
     patience = config.early_stopping_patience
-    seed = config.random_seed
 
     # ------------------------------------------------------------------
     # 3. Optuna objective
@@ -265,6 +278,7 @@ def main():
 
     study = optuna.create_study(
         direction='maximize',
+        sampler=optuna.samplers.TPESampler(seed=seed),
         storage=f'sqlite:///{storage_path}',
         study_name=model_name,
         load_if_exists=True,
