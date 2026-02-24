@@ -11,6 +11,8 @@ Created: February 2026
 """
 
 import sys
+import random
+import numpy as np
 from pathlib import Path
 
 # Add project root to Python path
@@ -50,11 +52,15 @@ def run_complete_pipeline(config_path: str = 'configs/config.yaml'):
     # Load configuration
     config = load_config(config_path)
     config.display()
-    
+
     # Get paths and settings from config
     source_file = config.raw_source
     output_dir = config.output_dir
     random_seed = config.random_seed
+
+    # Seed all global RNGs before any random operations
+    random.seed(random_seed)
+    np.random.seed(random_seed)
     
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)

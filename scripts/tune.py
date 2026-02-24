@@ -203,9 +203,7 @@ def main():
 
     batch_size = config.batch_size
     seed = config.random_seed
-    _g = torch.Generator().manual_seed(seed)
-    train_loader = DataLoader(TensorDataset(X_train, y_train),
-                              batch_size=batch_size, shuffle=True, generator=_g)
+    # val/test loaders are deterministic (no shuffle) — create once here
     val_loader = DataLoader(TensorDataset(X_val, y_val),
                             batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(TensorDataset(X_test, y_test),
@@ -227,6 +225,14 @@ def main():
     def objective(trial):
         print(f"\n  --- Trial {trial.number + 1}/{config.n_trials} ---")
         torch.manual_seed(seed)
+
+        # Each trial gets its own deterministic but unique shuffle order.
+        # Using seed + trial.number ensures reproducibility whether the study
+        # runs fresh or is resumed from the SQLite file.
+        _g = torch.Generator().manual_seed(seed + trial.number)
+        train_loader = DataLoader(TensorDataset(X_train, y_train),
+                                  batch_size=batch_size, shuffle=True,
+                                  generator=_g)
 
         # Universal params
         hidden_layers = trial.suggest_int(
@@ -339,8 +345,15 @@ def main():
         **variant_kwargs,
     )
 
+    # Fresh loader for the retrain — always starts from seed regardless of
+    # how many trials ran or whether the study was resumed mid-way.
+    _g_retrain = torch.Generator().manual_seed(seed)
+    train_loader_final = DataLoader(TensorDataset(X_train, y_train),
+                                    batch_size=batch_size, shuffle=True,
+                                    generator=_g_retrain)
+
     best_val_acc_retrain, best_state = train_model(
-        best_model, train_loader, val_loader,
+        best_model, train_loader_final, val_loader,
         lr=best_params['lr'],
         max_epochs=max_epochs,
         patience=patience,
