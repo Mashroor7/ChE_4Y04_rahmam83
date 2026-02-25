@@ -109,7 +109,7 @@ models:
 # Training settings
 training:
   batch_size: 512           # Fixed — not tuned
-  max_epochs: 50            # Maximum epochs (early stopping may cut short)
+  max_epochs: 100            # Maximum epochs (early stopping may cut short)
   early_stopping_patience: 5
 
 # Tuning settings
