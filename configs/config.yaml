@@ -3,7 +3,7 @@
 # Data Paths
 data:
   raw_source: 'data\raw\TEP_Mode1.h5'  # UPDATE THIS: Path to your 23GB source file
-  output_dir: 'data\processed'        # UPDATE THIS: Where to save processed data
+  output_dir: 'data\processed_full'   # Exp 2 full dataset (use 'data\processed' for Exp 1)
 
 # Random Seed
 random_seed: 42
@@ -26,7 +26,7 @@ feature_engineering:
     # - 'Reactor Comp D'
     # - 'Separator Comp E'
     
-    # For now, this is empty - Fill this  after running inspect_columns.py
+    # Fill this  after running inspect_columns.py
     ['Time', 
      'Component A to Reactor',
      'Component B to Reactor',
@@ -86,10 +86,10 @@ save_options:
 
 # Split Configuration (runs per split)
 splits:
-  total_runs: 50              # Runs to select per IDV
-  train_runs: 30              # Runs for training
-  val_runs: 10                # Runs for validation
-  test_runs: 10               # Runs for testing
+  total_runs: 200             # Exp 2: full dataset (use 50 for Exp 1)
+  train_runs: 160             # Exp 2: 80% train (use 30 for Exp 1)
+  val_runs: 0                 # Exp 2: no validation (use 10 for Exp 1)
+  test_runs: 40               # Exp 2: 20% test (use 10 for Exp 1)
 
 # Scaling Options
 scaling:
@@ -104,7 +104,7 @@ windowing:
 
 # Model paths
 models:
-  weights_dir: 'results'    # Root folder for all results
+  weights_dir: 'results_full'   # Exp 2 output (use 'results' for Exp 1)
 
 # Training settings
 training:

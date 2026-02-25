@@ -81,7 +81,7 @@ def run_windowing_pipeline(config_path: str = 'configs/config.yaml'):
     print("STEP 1/3: LOADING PROCESSED DATA")
     print("🔹"*35 + "\n")
 
-    for pkl_path in [train_pkl, val_pkl, test_pkl]:
+    for pkl_path in [train_pkl, test_pkl]:  # val is optional
         if not pkl_path.exists():
             raise FileNotFoundError(
                 f"\n❌ File not found: {pkl_path}"
@@ -92,9 +92,13 @@ def run_windowing_pipeline(config_path: str = 'configs/config.yaml'):
     train_df = pd.read_pickle(train_pkl)
     print(f"  ✓ Train: {train_df.shape}")
 
-    print("  Loading val_final.pkl...")
-    val_df = pd.read_pickle(val_pkl)
-    print(f"  ✓ Val:   {val_df.shape}")
+    if val_pkl.exists():
+        print("  Loading val_final.pkl...")
+        val_df = pd.read_pickle(val_pkl)
+        print(f"  ✓ Val:   {val_df.shape}")
+    else:
+        print("  val_final.pkl not found — skipping validation split")
+        val_df = None
 
     print("  Loading test_final.pkl...")
     test_df = pd.read_pickle(test_pkl)
@@ -109,7 +113,7 @@ def run_windowing_pipeline(config_path: str = 'configs/config.yaml'):
 
     windows_data = create_all_windows(
         train_df=train_df,
-        val_df=val_df,
+        val_df=val_df,     # None when val_runs=0 — windowing skips it
         test_df=test_df,
         window_size=window_size,
         stride=stride
@@ -138,7 +142,7 @@ def run_windowing_pipeline(config_path: str = 'configs/config.yaml'):
     print("="*70)
 
     X_train = windows_data['train'][0]
-    X_val   = windows_data['val'][0]
+    X_val   = windows_data['val'][0] if 'val' in windows_data else None
     X_test  = windows_data['test'][0]
 
     print(f"\n  Window shape:  (n_windows, {window_size} × {X_train.shape[1] // window_size})")

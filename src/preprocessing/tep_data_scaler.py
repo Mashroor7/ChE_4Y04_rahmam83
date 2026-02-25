@@ -177,9 +177,9 @@ class TEPDataScaler:
         return self.scaler
 
 
-def scale_dataframes(train_df: pd.DataFrame, 
-                     val_df: pd.DataFrame, 
-                     test_df: pd.DataFrame,
+def scale_dataframes(train_df: pd.DataFrame,
+                     val_df: pd.DataFrame = None,
+                     test_df: pd.DataFrame = None,
                      save_scaler_path: Optional[str] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, TEPDataScaler]:
     """
     Scale train/val/test DataFrames using StandardScaler.
@@ -220,16 +220,20 @@ def scale_dataframes(train_df: pd.DataFrame,
     print("  Transforming training data...")
     train_scaled = scaler_obj.transform_dataframe(train_df)
     
-    print("  Transforming validation data...")
-    val_scaled = scaler_obj.transform_dataframe(val_df)
-    
+    if val_df is not None:
+        print("  Transforming validation data...")
+        val_scaled = scaler_obj.transform_dataframe(val_df)
+    else:
+        val_scaled = None
+
     print("  Transforming test data...")
     test_scaled = scaler_obj.transform_dataframe(test_df)
-    
+
     # Verify scaling
     print("\nStep 3: Verifying scaling...")
     scaler_obj.verify_scaling_dataframe(train_scaled, "Training Set")
-    scaler_obj.verify_scaling_dataframe(val_scaled, "Validation Set")
+    if val_scaled is not None:
+        scaler_obj.verify_scaling_dataframe(val_scaled, "Validation Set")
     scaler_obj.verify_scaling_dataframe(test_scaled, "Test Set")
     
     # Save scaler if path provided

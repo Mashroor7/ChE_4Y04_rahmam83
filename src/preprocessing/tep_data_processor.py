@@ -26,26 +26,36 @@ class TEPDataProcessor:
     Handles extraction, splitting, loading, and labeling of TEP data from HDF5 files.
     """
     
-    def __init__(self, source_file: str, random_seed: int = 42):
+    def __init__(self, source_file: str, random_seed: int = 42,
+                 total_runs: int = 50, train_runs: int = 30,
+                 val_runs: int = 10, test_runs: int = 10):
         """
         Initialize the TEP Data Processor.
-        
+
         Parameters:
         -----------
         source_file : str
             Path to the source HDF5 file (e.g., 'TEP_Mode1.h5')
         random_seed : int
             Random seed for reproducibility
+        total_runs : int
+            Number of runs to randomly select per IDV (default: 50)
+        train_runs : int
+            Number of runs allocated to training (default: 30)
+        val_runs : int
+            Number of runs allocated to validation; set 0 to skip (default: 10)
+        test_runs : int
+            Number of runs allocated to testing (default: 10)
         """
         self.source_file = Path(source_file)
         self.random_seed = random_seed
         np.random.seed(random_seed)
-        
-        # Configuration constants
-        self.TOTAL_RUNS = 50
-        self.TRAIN_RUNS = 30
-        self.VAL_RUNS = 10
-        self.TEST_RUNS = 10
+
+        # Split configuration (read from args, not hardcoded)
+        self.TOTAL_RUNS = total_runs
+        self.TRAIN_RUNS = train_runs
+        self.VAL_RUNS = val_runs
+        self.TEST_RUNS = test_runs
         self.FAULT_START_INDEX = 600  # Fault is inserted at index 600
         
         # IDV range (1-28, excluding 6 which doesn't exist)
@@ -68,11 +78,11 @@ class TEPDataProcessor:
         """
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Define output file paths
-        train_file = output_path / 'train_30runs.h5'
-        val_file = output_path / 'val_10runs.h5'
-        test_file = output_path / 'test_10runs.h5'
+
+        # Define output file paths (filenames reflect actual run counts)
+        train_file = output_path / f'train_{self.TRAIN_RUNS}runs.h5'
+        val_file   = output_path / f'val_{self.VAL_RUNS}runs.h5' if self.VAL_RUNS > 0 else None
+        test_file  = output_path / f'test_{self.TEST_RUNS}runs.h5'
         
         print(f"\n{'='*70}")
         print(f"EXTRACTING AND SPLITTING TEP DATA")
@@ -94,8 +104,9 @@ class TEPDataProcessor:
             print(f"✓ Combined {len(processdata_labels)} processdata + {len(additional_meas_labels)} additional_meas labels")
             print(f"  Total features: {len(combined_labels)}")
             
-            # Save labels to output files
-            for out_file in [train_file, val_file, test_file]:
+            # Save labels to output files (skip val_file when val_runs=0)
+            output_files = [f for f in [train_file, val_file, test_file] if f is not None]
+            for out_file in output_files:
                 with h5py.File(out_file, 'w') as dst:
                     dst.create_dataset('Feature_Labels', data=combined_labels.astype('S'))
             print(f"✓ Saved labels to output files\n")
@@ -123,15 +134,14 @@ class TEPDataProcessor:
                 
                 # Split into train/val/test
                 train_runs = selected_runs[:self.TRAIN_RUNS]
-                val_runs = selected_runs[self.TRAIN_RUNS:self.TRAIN_RUNS + self.VAL_RUNS]
-                test_runs = selected_runs[self.TRAIN_RUNS + self.VAL_RUNS:]
-                
-                # Copy runs to respective output files
-                splits = [
-                    (train_file, train_runs, 'train'),
-                    (val_file, val_runs, 'val'),
-                    (test_file, test_runs, 'test')
-                ]
+                val_runs   = selected_runs[self.TRAIN_RUNS:self.TRAIN_RUNS + self.VAL_RUNS]
+                test_runs  = selected_runs[self.TRAIN_RUNS + self.VAL_RUNS:]
+
+                # Copy runs to respective output files (skip val when val_runs=0)
+                splits = [(train_file, train_runs, 'train'),
+                          (test_file,  test_runs,  'test')]
+                if self.VAL_RUNS > 0:
+                    splits.insert(1, (val_file, val_runs, 'val'))
                 
                 for out_file, runs, split_name in splits:
                     with h5py.File(out_file, 'a') as dst:
@@ -165,10 +175,11 @@ class TEPDataProcessor:
         print(f"{'='*70}")
         print(f"Output files created:")
         print(f"  - {train_file}")
-        print(f"  - {val_file}")
+        if val_file is not None:
+            print(f"  - {val_file}")
         print(f"  - {test_file}")
         print(f"{'='*70}\n")
-        
+
         return train_file, val_file, test_file
     
     def load_and_label_data(self, file_path: str, split_name: str = None) -> pd.DataFrame:

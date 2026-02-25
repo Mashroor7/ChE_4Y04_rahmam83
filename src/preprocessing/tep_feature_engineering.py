@@ -306,8 +306,8 @@ class TEPFeatureEngineer:
         }
 
 
-def apply_feature_engineering(train_df: pd.DataFrame, val_df: pd.DataFrame, 
-                              test_df: pd.DataFrame,
+def apply_feature_engineering(train_df: pd.DataFrame, val_df: pd.DataFrame = None,
+                              test_df: pd.DataFrame = None,
                               drop_analyzers: bool = True,
                               drop_zero_var: bool = True,
                               variance_threshold: float = 0.0,
@@ -357,10 +357,13 @@ def apply_feature_engineering(train_df: pd.DataFrame, val_df: pd.DataFrame,
         analyzer_list=analyzer_list
     )
     
-    # Transform validation and test data
-    print("\nTransforming validation set...")
-    val_transformed = fe.transform(val_df)
-    
+    # Transform validation and test data (val is optional)
+    if val_df is not None:
+        print("\nTransforming validation set...")
+        val_transformed = fe.transform(val_df)
+    else:
+        val_transformed = None
+
     print("Transforming test set...")
     test_transformed = fe.transform(test_df)
     

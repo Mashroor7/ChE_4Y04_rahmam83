@@ -147,8 +147,8 @@ class TEPWindowGenerator:
 
 
 def create_all_windows(train_df: pd.DataFrame,
-                       val_df: pd.DataFrame,
-                       test_df: pd.DataFrame,
+                       val_df: pd.DataFrame = None,
+                       test_df: pd.DataFrame = None,
                        window_size: int = 5,
                        stride: int = 1) -> dict:
     """
@@ -175,6 +175,9 @@ def create_all_windows(train_df: pd.DataFrame,
         y shape: (n_windows,)
     """
 
+    if test_df is None:
+        raise ValueError("test_df is required")
+
     print("\n" + "="*70)
     print("SLIDING WINDOW CREATION")
     print("="*70)
@@ -184,13 +187,18 @@ def create_all_windows(train_df: pd.DataFrame,
     print("\n[1/3] Training data...")
     X_train, y_train, train_info = generator.create_windows(train_df, "Train")
 
-    print("\n[2/3] Validation data...")
-    X_val, y_val, val_info = generator.create_windows(val_df, "Validation")
+    if val_df is not None:
+        print("\n[2/3] Validation data...")
+        X_val, y_val, val_info = generator.create_windows(val_df, "Validation")
+    else:
+        print("\n[2/3] Validation data — skipped (val_runs=0)")
+        X_val, y_val, val_info = None, None, None
 
     print("\n[3/3] Test data...")
     X_test, y_test, test_info = generator.create_windows(test_df, "Test")
 
     # Summary
+    total = len(X_train) + len(X_test) + (len(X_val) if X_val is not None else 0)
     print("\n" + "="*70)
     print("WINDOWING COMPLETE - SUMMARY")
     print("="*70)
@@ -200,16 +208,19 @@ def create_all_windows(train_df: pd.DataFrame,
     print(f"\n  {'Split':<12} {'Windows':>12} {'Shape':>30}")
     print(f"  {'-'*55}")
     print(f"  {'Train':<12} {len(X_train):>12,} {str(X_train.shape):>30}")
-    print(f"  {'Val':<12} {len(X_val):>12,} {str(X_val.shape):>30}")
+    if X_val is not None:
+        print(f"  {'Val':<12} {len(X_val):>12,} {str(X_val.shape):>30}")
     print(f"  {'Test':<12} {len(X_test):>12,} {str(X_test.shape):>30}")
-    print(f"  {'Total':<12} {len(X_train)+len(X_val)+len(X_test):>12,}")
+    print(f"  {'Total':<12} {total:>12,}")
     print("="*70 + "\n")
 
-    return {
+    result = {
         'train': (X_train, y_train, train_info),
-        'val':   (X_val,   y_val,   val_info),
-        'test':  (X_test,  y_test,  test_info)
+        'test':  (X_test,  y_test,  test_info),
     }
+    if X_val is not None:
+        result['val'] = (X_val, y_val, val_info)
+    return result
 
 
 def save_windows(windows_data: dict,
