@@ -25,6 +25,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from tqdm import tqdm
+
 from configs.config_loader import load_config
 from src.models import MODEL_REGISTRY
 from scripts.tune import seed_everything, VARIANT_PARAMS
@@ -60,7 +62,9 @@ def train_fixed(model, train_loader, lr, max_epochs, device, seed, verbose=True)
     criterion = nn.CrossEntropyLoss()
 
     epoch_losses = []
-    for epoch in range(max_epochs):
+    epoch_bar = tqdm(range(max_epochs), desc="    Training", unit="epoch",
+                     disable=not verbose)
+    for epoch in epoch_bar:
         model.train()
         total_loss = 0.0
         n_batches = 0
@@ -76,8 +80,7 @@ def train_fixed(model, train_loader, lr, max_epochs, device, seed, verbose=True)
 
         avg_loss = total_loss / max(n_batches, 1)
         epoch_losses.append(avg_loss)
-        if verbose:
-            print(f"    Epoch {epoch+1:3d}/{max_epochs} — train_loss: {avg_loss:.4f}")
+        epoch_bar.set_postfix(loss=f"{avg_loss:.4f}")
 
     return {k: v.cpu().clone() for k, v in model.state_dict().items()}, epoch_losses
 
@@ -96,7 +99,7 @@ def evaluate(model, loader, device):
     model.eval()
     all_preds, all_true, all_probs = [], [], []
     with torch.no_grad():
-        for X_batch, y_batch in loader:
+        for X_batch, y_batch in tqdm(loader, desc="    Evaluating", unit="batch", leave=False):
             X_batch = X_batch.to(device)
             logits = model(X_batch)
             probs  = torch.softmax(logits, dim=1).cpu().numpy()
