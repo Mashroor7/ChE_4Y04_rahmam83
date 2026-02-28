@@ -56,25 +56,44 @@ models:
 ```bash
 # 1. Extract and preprocess data (30 runs/IDV, 30/10/10 split)
 python scripts/run_pipeline.py
+```
+Outputs to `data/processed/`:
+- `feature_engineer.pkl` — fitted feature engineering pipeline
+- `scaler.pkl` — fitted StandardScaler (fit on train only)
+- `train_final.pkl` — scaled training DataFrame
+- `val_final.pkl` — scaled validation DataFrame
+- `test_final.pkl` — scaled test DataFrame
+- `train_final_sample.csv` — first 10,000 rows of train for inspection
 
+```bash
 # 2. Create sliding windows (train, val, test)
 python scripts/create_windows.py
+```
+Outputs to `data/processed/windows/`:
+- `train_windows_w5_s1.npz` — training windows (X, y, metadata)
+- `val_windows_w5_s1.npz` — validation windows
+- `test_windows_w5_s1.npz` — test windows
 
+```bash
 # 3. Tune each KAN variant (Optuna, 30 trials each)
 python scripts/tune.py --model efficient_kan
 python scripts/tune.py --model fourier_kan
 python scripts/tune.py --model wavelet_kan
 python scripts/tune.py --model fast_kan
+```
+Outputs per model to `results/<model>/`:
+- `best_params.json` — best hyperparameters found by Optuna
+- `best_model.pt` — model retrained with best hyperparameters
+- `predictions.npz` — test set predictions (`y_pred`, `y_true`, `y_prob`)
+- `metrics.json` — val accuracy, training loss curve, trial count, best trial number
 
+```bash
 # 4. Evaluate results
 python scripts/evaluate.py
 ```
-
-Outputs per model saved to `results/<model>/`:
-- `best_params.json` — best hyperparameters found
-- `best_model.pt` — retrained model weights
-- `predictions.npz` — test set predictions
-- `metrics.json` — val and test accuracy
+Outputs per model to `results/<model>/`:
+- `eval_metrics.json` — full metrics (accuracy, macro F1, per-class F1, confusion matrix, alarm stats)
+- `loss_curve.png` — training loss curve plot
 
 ---
 
@@ -110,24 +129,41 @@ models:
 ```bash
 # 1. Extract and preprocess data (200 runs/IDV, 160/40 split, no validation)
 python scripts/run_pipeline.py
+```
+Outputs to `data/processed_full/`:
+- `feature_engineer.pkl` — fitted feature engineering pipeline
+- `scaler.pkl` — fitted StandardScaler (fit on train only)
+- `train_final.pkl` — scaled training DataFrame (160 runs/IDV)
+- `test_final.pkl` — scaled test DataFrame (40 runs/IDV)
+- `train_final_sample.csv` — first 10,000 rows of train for inspection
 
-# 2. Create sliding windows (train and test only)
+```bash
+# 2. Create sliding windows (train and test only — no val)
 python scripts/create_windows.py
+```
+Outputs to `data/processed_full/windows/`:
+- `train_windows_w5_s1.npz` — training windows (X, y, metadata)
+- `test_windows_w5_s1.npz` — test windows
 
+```bash
 # 3. Train all four models with tuned hyperparameters (100 epochs, no early stopping)
 #    --params-dir points to best_params.json files from Experiment 1
 python scripts/train_best.py --all --params-dir results
-
-# 4. Evaluate results
-python scripts/evaluate.py
 ```
+Outputs per model to `results_full/<model>/`:
+- `best_model.pt` — final trained model weights
+- `predictions.npz` — test set predictions (`y_pred`, `y_true`, `y_prob`)
+- `metrics.json` — test accuracy, epoch count, training loss curve
 
 To train a single variant instead of all four:
 ```bash
 python scripts/train_best.py --model wavelet_kan --params-dir results
 ```
 
-Outputs per model saved to `results_full/<model>/`:
-- `best_model.pt` — final trained model weights
-- `predictions.npz` — test set predictions
-- `metrics.json` — test accuracy and training details
+```bash
+# 4. Evaluate results
+python scripts/evaluate.py
+```
+Outputs per model to `results_full/<model>/`:
+- `eval_metrics.json` — full metrics (accuracy, macro F1, per-class F1, confusion matrix, alarm stats)
+- `loss_curve.png` — training loss curve plot
