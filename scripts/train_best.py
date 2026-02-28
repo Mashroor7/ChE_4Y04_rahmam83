@@ -59,6 +59,7 @@ def train_fixed(model, train_loader, lr, max_epochs, device, seed, verbose=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
 
+    epoch_losses = []
     for epoch in range(max_epochs):
         model.train()
         total_loss = 0.0
@@ -73,30 +74,41 @@ def train_fixed(model, train_loader, lr, max_epochs, device, seed, verbose=True)
             total_loss += loss.item()
             n_batches += 1
 
+        avg_loss = total_loss / max(n_batches, 1)
+        epoch_losses.append(avg_loss)
         if verbose:
-            avg_loss = total_loss / max(n_batches, 1)
             print(f"    Epoch {epoch+1:3d}/{max_epochs} — train_loss: {avg_loss:.4f}")
 
-    return {k: v.cpu().clone() for k, v in model.state_dict().items()}
+    return {k: v.cpu().clone() for k, v in model.state_dict().items()}, epoch_losses
 
 
 # ======================================================================
 # Evaluation helper (reuses tune.py logic)
 # ======================================================================
 def evaluate(model, loader, device):
-    """Return (accuracy, y_pred, y_true)."""
+    """Return (accuracy, y_pred, y_true, y_prob).
+
+    y_prob : ndarray, shape (n_windows, n_classes)
+        Softmax probabilities for every window.
+        Fault probability for window i = 1 - y_prob[i, 0].
+        Confidence of predicted class  = y_prob[i, y_pred[i]].
+    """
     model.eval()
-    all_preds, all_true = [], []
+    all_preds, all_true, all_probs = [], [], []
     with torch.no_grad():
         for X_batch, y_batch in loader:
             X_batch = X_batch.to(device)
-            preds = model(X_batch).argmax(dim=1).cpu().numpy()
+            logits = model(X_batch)
+            probs  = torch.softmax(logits, dim=1).cpu().numpy()
+            preds  = probs.argmax(axis=1)
+            all_probs.append(probs)
             all_preds.append(preds)
             all_true.append(y_batch.numpy())
     y_pred = np.concatenate(all_preds)
     y_true = np.concatenate(all_true)
+    y_prob = np.vstack(all_probs)          # (n_windows, n_classes)
     acc = (y_pred == y_true).mean()
-    return acc, y_pred, y_true
+    return acc, y_pred, y_true, y_prob
 
 
 # ======================================================================
@@ -192,7 +204,7 @@ def train_one_variant(model_name, config, windows_dir, params_dir, output_dir, d
     print(f"\n  Training for {max_epochs} epochs (no early stopping)...")
     t0 = time.time()
 
-    final_state = train_fixed(
+    final_state, epoch_losses = train_fixed(
         model, train_loader,
         lr=best_params['lr'],
         max_epochs=max_epochs,
@@ -209,7 +221,7 @@ def train_one_variant(model_name, config, windows_dir, params_dir, output_dir, d
     # ------------------------------------------------------------------
     model.load_state_dict(final_state)
     model = model.to(device)
-    test_acc, y_pred, y_true = evaluate(model, test_loader, device)
+    test_acc, y_pred, y_true, y_prob = evaluate(model, test_loader, device)
     print(f"  Test accuracy: {test_acc:.4f}")
 
     # ------------------------------------------------------------------
@@ -223,7 +235,16 @@ def train_one_variant(model_name, config, windows_dir, params_dir, output_dir, d
     print(f"  Saved: {model_path}")
 
     preds_path = out_dir / 'predictions.npz'
-    np.savez(preds_path, y_pred=y_pred, y_true=y_true)
+    # Save predictions, probabilities, and window metadata so every window
+    # can be mapped back to its (Run_ID, timestep) for alarm / latency analysis.
+    # y_prob shape: (n_windows, n_classes)
+    #   fault_prob[i]  = 1 - y_prob[i, 0]   (probability window is NOT healthy)
+    #   confidence[i]  = y_prob[i, y_pred[i]] (confidence in the predicted class)
+    save_kwargs = dict(y_pred=y_pred, y_true=y_true, y_prob=y_prob)
+    for key in ('Run_ID', 'start_idx', 'end_idx'):
+        if key in test_data:
+            save_kwargs[key] = test_data[key]
+    np.savez(preds_path, **save_kwargs)
     print(f"  Saved: {preds_path}")
 
     metrics = {
@@ -232,6 +253,7 @@ def train_one_variant(model_name, config, windows_dir, params_dir, output_dir, d
         'best_params': best_params,
         'train_windows': int(X_train.shape[0]),
         'test_windows': int(X_test.shape[0]),
+        'train_loss_curve': [float(l) for l in epoch_losses],
     }
     metrics_path = out_dir / 'metrics.json'
     with open(metrics_path, 'w') as f:
