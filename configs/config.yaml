@@ -108,13 +108,13 @@ models:
 
 # Training settings
 training:
-  batch_size: 512           # Fixed — not tuned
+  batch_size: 2048           # Fixed — not tuned
   max_epochs: 100            # Maximum epochs (early stopping may cut short)
-  early_stopping_patience: 5
+  early_stopping_patience: 10  # Stop if no improvement in this many epochs
 
 # Tuning settings
 tuning:
-  n_trials: 30              # Number of Optuna trials per variant
+  n_trials: 50              # Number of Optuna trials per variant
   optimize_metric: 'val_accuracy'
   direction: 'maximize'
 
