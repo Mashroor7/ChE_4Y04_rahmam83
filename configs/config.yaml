@@ -112,8 +112,9 @@ models:
 # Training settings
 training:
   batch_size: 2048           # Fixed — not tuned
-  max_epochs: 100            # Maximum epochs 
+  max_epochs: 100            # Maximum epochs
   early_stopping_patience: 10  # Stop if no improvement in this many epochs
+  num_workers: 4             # DataLoader worker processes (0 = main process only)
 
 # Tuning settings
 tuning:

@@ -203,14 +203,20 @@ def main():
 
     batch_size = config.batch_size
     seed = config.random_seed
+    num_workers = config.num_workers
+    persistent = num_workers > 0
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    pin = device.type == 'cuda'
+    print(f"  Device: {device}")
     # val/test loaders are deterministic (no shuffle) — create once here
     val_loader = DataLoader(TensorDataset(X_val, y_val),
-                            batch_size=batch_size, shuffle=False)
+                            batch_size=batch_size, shuffle=False,
+                            num_workers=num_workers, persistent_workers=persistent,
+                            pin_memory=pin)
     test_loader = DataLoader(TensorDataset(X_test, y_test),
-                             batch_size=batch_size, shuffle=False)
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"  Device: {device}")
+                             batch_size=batch_size, shuffle=False,
+                             num_workers=num_workers, persistent_workers=persistent,
+                             pin_memory=pin)
 
     # ------------------------------------------------------------------
     # 2. Search space
@@ -232,7 +238,8 @@ def main():
         _g = torch.Generator().manual_seed(seed + trial.number)
         train_loader = DataLoader(TensorDataset(X_train, y_train),
                                   batch_size=batch_size, shuffle=True,
-                                  generator=_g)
+                                  generator=_g, num_workers=num_workers,
+                                  persistent_workers=persistent, pin_memory=pin)
 
         # Universal params
         hidden_layers = trial.suggest_int(
@@ -350,7 +357,8 @@ def main():
     _g_retrain = torch.Generator().manual_seed(seed)
     train_loader_final = DataLoader(TensorDataset(X_train, y_train),
                                     batch_size=batch_size, shuffle=True,
-                                    generator=_g_retrain)
+                                    generator=_g_retrain, num_workers=num_workers,
+                                    persistent_workers=persistent, pin_memory=pin)
 
     best_val_acc_retrain, best_state = train_model(
         best_model, train_loader_final, val_loader,

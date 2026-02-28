@@ -176,6 +176,10 @@ class Config:
     @property
     def early_stopping_patience(self) -> int:
         return self._config.get('training', {}).get('early_stopping_patience', 5)
+
+    @property
+    def num_workers(self) -> int:
+        return self._config.get('training', {}).get('num_workers', 0)
     
     def display(self):
         """Display current configuration."""
