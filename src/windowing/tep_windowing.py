@@ -268,6 +268,9 @@ def save_windows(windows_data: dict,
     saved_paths = {}
 
     for split_name, step in splits.items():
+        if split_name not in windows_data:
+            print(f"  [{step}] Skipping {split_name} (not available)")
+            continue
         X, y, info = windows_data[split_name]
 
         filepath = output_path / f'{split_name}_windows_w{window_size}_s{stride}.npz'
