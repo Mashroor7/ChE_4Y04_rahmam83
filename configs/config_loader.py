@@ -53,8 +53,8 @@ class Config:
         # Validate data paths section
         if 'raw_source' not in self._config['data']:
             raise ValueError("Missing required field: data.raw_source")
-        if 'output_dir' not in self._config['data']:
-            raise ValueError("Missing required field: data.output_dir")
+        if 'processed_base_dir' not in self._config['data']:
+            raise ValueError("Missing required field: data.processed_base_dir")
     
     @property
     def raw_source(self) -> str:
@@ -62,9 +62,20 @@ class Config:
         return self._config['data']['raw_source']
     
     @property
+    def _experiment_suffix(self) -> str:
+        """Suffix derived from split settings, e.g. 'N50_tr30_v10_te10'."""
+        splits = self._config.get('splits', {})
+        total = splits.get('total_runs', 50)
+        train = splits.get('train_runs', 30)
+        val   = splits.get('val_runs', 10)
+        test  = splits.get('test_runs', 10)
+        return f"N{total}_tr{train}_v{val}_te{test}"
+
+    @property
     def output_dir(self) -> str:
-        """Output directory for processed data."""
-        return self._config['data']['output_dir']
+        """Output directory for processed data, auto-derived from split settings."""
+        base = self._config['data']['processed_base_dir']
+        return f"{base}_{self._experiment_suffix}"
     
     @property
     def random_seed(self) -> int:
@@ -147,7 +158,8 @@ class Config:
 
     @property
     def results_dir(self) -> str:
-        return self._config.get('models', {}).get('weights_dir', 'results')
+        base = self._config.get('models', {}).get('results_base_dir', 'results')
+        return f"{base}_{self._experiment_suffix}"
 
     @property
     def tuning_search_space(self) -> dict:
@@ -171,8 +183,9 @@ class Config:
         print("CURRENT CONFIGURATION")
         print("="*70)
         print("\nData Paths:")
-        print(f"  Raw source: {self.raw_source}")
-        print(f"  Output dir: {self.output_dir}")
+        print(f"  Raw source:  {self.raw_source}")
+        print(f"  Output dir:  {self.output_dir}  (auto-derived from splits)")
+        print(f"  Results dir: {self.results_dir}  (auto-derived from splits)")
         print(f"\nRandom seed: {self.random_seed}")
         print(f"\nFeature Engineering:")
         print(f"  Drop analyzers: {self.drop_analyzers}")
