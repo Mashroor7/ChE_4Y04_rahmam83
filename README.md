@@ -41,23 +41,25 @@ for each KAN variant via Optuna (30 trials per model).
 **Config settings** (`configs/config.yaml`):
 ```yaml
 data:
-  output_dir: 'data\processed'
+  processed_base_dir: 'data\processed'   # suffix auto-appended → data\processed_N50_tr30_v10_te10
 splits:
   total_runs: 50
   train_runs: 30
   val_runs: 10
   test_runs: 10
 models:
-  weights_dir: 'results'
+  results_base_dir: 'results'            # suffix auto-appended → results_N50_tr30_v10_te10
 ```
+
+The output and results directories are **automatically derived** from the split settings — no manual path changes needed between experiments.
 
 **Run order:**
 
 ```bash
-# 1. Extract and preprocess data (30 runs/IDV, 30/10/10 split)
+# 1. Extract and preprocess data (50 runs/IDV, 30/10/10 split)
 python scripts/run_pipeline.py
 ```
-Outputs to `data/processed/`:
+Outputs to `data/processed_N50_tr30_v10_te10/`:
 - `feature_engineer.pkl` — fitted feature engineering pipeline
 - `scaler.pkl` — fitted StandardScaler (fit on train only)
 - `train_final.pkl` — scaled training DataFrame
@@ -69,19 +71,19 @@ Outputs to `data/processed/`:
 # 2. Create sliding windows (train, val, test)
 python scripts/create_windows.py
 ```
-Outputs to `data/processed/windows/`:
+Outputs to `data/processed_N50_tr30_v10_te10/windows/`:
 - `train_windows_w5_s1.npz` — training windows (X, y, metadata)
 - `val_windows_w5_s1.npz` — validation windows
 - `test_windows_w5_s1.npz` — test windows
 
 ```bash
-# 3. Tune each KAN variant (Optuna, 30 trials each)
+# 3. Tune each KAN variant (Optuna, 50 trials each)
 python scripts/tune.py --model efficient_kan
 python scripts/tune.py --model fourier_kan
 python scripts/tune.py --model wavelet_kan
 python scripts/tune.py --model fast_kan
 ```
-Outputs per model to `results/<model>/`:
+Outputs per model to `results_N50_tr30_v10_te10/<model>/`:
 - `best_params.json` — best hyperparameters found by Optuna
 - `best_model.pt` — model retrained with best hyperparameters
 - `predictions.npz` — test set predictions (`y_pred`, `y_true`, `y_prob`)
@@ -91,7 +93,7 @@ Outputs per model to `results/<model>/`:
 # 4. Evaluate results
 python scripts/evaluate.py
 ```
-Outputs per model to `results/<model>/`:
+Outputs per model to `results_N50_tr30_v10_te10/<model>/`:
 - `eval_metrics.json` — full metrics (accuracy, macro F1, per-class F1, confusion matrix, alarm stats)
 - `loss_curve.png` — training loss curve plot
 
@@ -105,24 +107,26 @@ performed — `best_params.json` from `results/` is loaded directly.
 
 **Prerequisite:** Experiment 1 must be completed. The following files must exist:
 ```
-results/efficient_kan/best_params.json
-results/fourier_kan/best_params.json
-results/wavelet_kan/best_params.json
-results/fast_kan/best_params.json
+results_N50_tr30_v10_te10/efficient_kan/best_params.json
+results_N50_tr30_v10_te10/fourier_kan/best_params.json
+results_N50_tr30_v10_te10/wavelet_kan/best_params.json
+results_N50_tr30_v10_te10/fast_kan/best_params.json
 ```
 
 **Config settings** (`configs/config.yaml`):
 ```yaml
 data:
-  output_dir: 'data\processed_full'
+  processed_base_dir: 'data\processed'   # suffix auto-appended → data\processed_N200_tr160_v0_te40
 splits:
   total_runs: 200
   train_runs: 160
   val_runs: 0
   test_runs: 40
 models:
-  weights_dir: 'results_full'
+  results_base_dir: 'results'            # suffix auto-appended → results_N200_tr160_v0_te40
 ```
+
+The output and results directories are **automatically derived** from the split settings — only the `splits` block needs to change between experiments.
 
 **Run order:**
 
@@ -130,7 +134,7 @@ models:
 # 1. Extract and preprocess data (200 runs/IDV, 160/40 split, no validation)
 python scripts/run_pipeline.py
 ```
-Outputs to `data/processed_full/`:
+Outputs to `data/processed_N200_tr160_v0_te40/`:
 - `feature_engineer.pkl` — fitted feature engineering pipeline
 - `scaler.pkl` — fitted StandardScaler (fit on train only)
 - `train_final.pkl` — scaled training DataFrame (160 runs/IDV)
@@ -141,29 +145,29 @@ Outputs to `data/processed_full/`:
 # 2. Create sliding windows (train and test only — no val)
 python scripts/create_windows.py
 ```
-Outputs to `data/processed_full/windows/`:
+Outputs to `data/processed_N200_tr160_v0_te40/windows/`:
 - `train_windows_w5_s1.npz` — training windows (X, y, metadata)
 - `test_windows_w5_s1.npz` — test windows
 
 ```bash
 # 3. Train all four models with tuned hyperparameters (100 epochs, no early stopping)
 #    --params-dir points to best_params.json files from Experiment 1
-python scripts/train_best.py --all --params-dir results
+python scripts/train_best.py --all --params-dir results_N50_tr30_v10_te10
 ```
-Outputs per model to `results_full/<model>/`:
+Outputs per model to `results_N200_tr160_v0_te40/<model>/`:
 - `best_model.pt` — final trained model weights
 - `predictions.npz` — test set predictions (`y_pred`, `y_true`, `y_prob`)
 - `metrics.json` — test accuracy, epoch count, training loss curve
 
 To train a single variant instead of all four:
 ```bash
-python scripts/train_best.py --model wavelet_kan --params-dir results
+python scripts/train_best.py --model wavelet_kan --params-dir results_N50_tr30_v10_te10
 ```
 
 ```bash
 # 4. Evaluate results
 python scripts/evaluate.py
 ```
-Outputs per model to `results_full/<model>/`:
+Outputs per model to `results_N200_tr160_v0_te40/<model>/`:
 - `eval_metrics.json` — full metrics (accuracy, macro F1, per-class F1, confusion matrix, alarm stats)
 - `loss_curve.png` — training loss curve plot
