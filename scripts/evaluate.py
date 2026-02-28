@@ -22,10 +22,27 @@ import numpy as np
 from sklearn.metrics import (
     accuracy_score, f1_score, confusion_matrix, classification_report
 )
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from configs.config_loader import load_config
 
 ALL_VARIANTS = ['efficient_kan', 'fourier_kan', 'wavelet_kan', 'fast_kan']
+
+
+def plot_loss_curve(epoch_losses: list, variant: str, out_path: Path):
+    """Save a training loss curve PNG for one variant."""
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(range(1, len(epoch_losses) + 1), epoch_losses, linewidth=1.5)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Cross-Entropy Loss')
+    ax.set_title(f'Training Loss — {variant}')
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"  Saved: {out_path}")
 
 
 def evaluate_variant(results_dir: Path, variant: str) -> dict | None:
@@ -42,6 +59,7 @@ def evaluate_variant(results_dir: Path, variant: str) -> dict | None:
     data = np.load(preds_path)
     y_pred = data['y_pred']
     y_true = data['y_true']
+    y_prob = data['y_prob'] if 'y_prob' in data else None  # (n_windows, n_classes)
 
     # Overall accuracy
     acc = accuracy_score(y_true, y_pred)
@@ -58,12 +76,53 @@ def evaluate_variant(results_dir: Path, variant: str) -> dict | None:
     # Confusion matrix
     cm = confusion_matrix(y_true, y_pred, labels=classes)
 
+    ALARM_THRESHOLD = 0.90  # fault probability threshold for raising an alarm
+
+    # Mean prediction confidence and alarm stats (when y_prob is available)
+    if y_prob is not None:
+        # Confidence = softmax probability of the predicted class
+        confidence = y_prob[np.arange(len(y_pred)), y_pred]
+        correct_mask = y_pred == y_true
+        mean_conf_correct = float(confidence[correct_mask].mean()) if correct_mask.any() else None
+        mean_conf_wrong   = float(confidence[~correct_mask].mean()) if (~correct_mask).any() else None
+
+        # Alarm: raised when fault probability (1 - P(class 0)) exceeds threshold
+        fault_prob  = 1.0 - y_prob[:, 0]
+        alarm       = fault_prob > ALARM_THRESHOLD
+        healthy_mask = y_true == 0
+        fault_mask   = y_true != 0
+        false_alarm_rate = float(alarm[healthy_mask].mean()) if healthy_mask.any() else None
+        detection_rate   = float(alarm[fault_mask].mean())   if fault_mask.any()   else None
+
+        # Top-2 margin: gap between highest and second-highest class probability.
+        # A small margin (e.g. 35% vs 34%) means the model is uncertain even when
+        # it produces a prediction. Full distribution is in y_prob for deeper inspection.
+        sorted_probs = np.sort(y_prob, axis=1)          # ascending per row
+        top2_margin  = sorted_probs[:, -1] - sorted_probs[:, -2]  # (n_windows,)
+        mean_top2_margin         = float(top2_margin.mean())
+        frac_ambiguous           = float((top2_margin < 0.10).mean())  # < 10pp gap
+    else:
+        confidence = None
+        mean_conf_correct = None
+        mean_conf_wrong   = None
+        false_alarm_rate  = None
+        detection_rate    = None
+        mean_top2_margin  = None
+        frac_ambiguous    = None
+
     metrics = {
         'accuracy': float(acc),
         'macro_f1': float(macro_f1),
         'per_class_f1': per_class_f1,
         'confusion_matrix': cm.tolist(),
         'classes': [int(c) for c in classes],
+        'mean_conf_correct': mean_conf_correct,
+        'mean_conf_wrong':   mean_conf_wrong,
+        'alarm_threshold':   ALARM_THRESHOLD,
+        'false_alarm_rate':  false_alarm_rate,
+        'detection_rate':    detection_rate,
+        'mean_top2_margin':  mean_top2_margin,
+        'frac_ambiguous':    frac_ambiguous,
     }
 
     # ------------------------------------------------------------------
@@ -79,7 +138,7 @@ def evaluate_variant(results_dir: Path, variant: str) -> dict | None:
     else:
         metrics['best_params'] = {}
 
-    # Tuning metrics (val_accuracy, best_trial, n_trials)
+    # Tuning metrics (val_accuracy, best_trial, n_trials) and loss curve
     tuning_metrics_path = variant_dir / 'metrics.json'
     if tuning_metrics_path.exists():
         with open(tuning_metrics_path, 'r') as f:
@@ -87,6 +146,10 @@ def evaluate_variant(results_dir: Path, variant: str) -> dict | None:
         metrics['val_accuracy'] = tuning_metrics.get('val_accuracy')
         metrics['n_trials'] = tuning_metrics.get('n_trials')
         metrics['best_trial'] = tuning_metrics.get('best_trial')
+
+        loss_curve = tuning_metrics.get('train_loss_curve')
+        if loss_curve:
+            plot_loss_curve(loss_curve, variant, variant_dir / 'loss_curve.png')
     else:
         metrics['val_accuracy'] = None
         metrics['n_trials'] = None
@@ -146,9 +209,9 @@ def print_comparison_table(results: dict):
     print(f"{'='*120}")
 
     header = (f"  {'Model':<18s} {'Accuracy':>10s} {'Macro F1':>10s} "
-              f"{'Val Acc':>10s} {'Gap':>8s} {'Best Params'}")
+              f"{'Val Acc':>10s} {'Gap':>8s} {'Conf(Correct)':>14s} {'Conf(Wrong)':>12s} {'Best Params'}")
     print(f"\n{header}")
-    print(f"  {'-'*18} {'-'*10} {'-'*10} {'-'*10} {'-'*8} {'-'*55}")
+    print(f"  {'-'*18} {'-'*10} {'-'*10} {'-'*10} {'-'*8} {'-'*14} {'-'*12} {'-'*55}")
 
     best_model = None
     best_acc = -1.0
@@ -168,8 +231,13 @@ def print_comparison_table(results: dict):
             gap_str = "N/A"
             val_str = "N/A"
 
+        cc = m.get('mean_conf_correct')
+        cw = m.get('mean_conf_wrong')
+        cc_str = f"{cc:.4f}" if cc is not None else "N/A"
+        cw_str = f"{cw:.4f}" if cw is not None else "N/A"
+
         print(f"  {variant:<18s} {acc:>10.4f} {f1:>10.4f} "
-              f"{val_str:>10s} {gap_str:>8s} {params_str}")
+              f"{val_str:>10s} {gap_str:>8s} {cc_str:>14s} {cw_str:>12s} {params_str}")
 
         if acc > best_acc:
             best_acc = acc
@@ -294,6 +362,39 @@ def print_comparison_table(results: dict):
         for true_c, pred_c, count in top_pairs:
             pct = 100.0 * count / total_misclassified
             print(f"    C{true_c:>4d} -> C{pred_c:>4d}   {count:>6d}   {pct:>11.1f}%")
+
+    # ==================================================================
+    # Section 5: Alarm Analysis (90% fault-probability threshold)
+    # ==================================================================
+    has_alarm_data = any(
+        m.get('false_alarm_rate') is not None or m.get('detection_rate') is not None
+        for m in results.values()
+    )
+    if has_alarm_data:
+        threshold = next(
+            (m['alarm_threshold'] for m in results.values() if 'alarm_threshold' in m),
+            0.90
+        )
+        print(f"\n{'='*120}")
+        print(f"  Alarm Analysis  (threshold: fault_prob = 1 - P(class 0) > {threshold:.0%})")
+        print(f"{'='*120}")
+        print(f"\n  {'Model':<18s} {'False Alarm Rate':>18s} {'Detection Rate':>16s} "
+              f"{'Mean Top-2 Margin':>20s} {'Ambiguous (<10pp)':>18s}")
+        print(f"  {'-'*18} {'-'*18} {'-'*16} {'-'*20} {'-'*18}")
+        print(f"  {'':18s} {'(healthy → alarm)':>18s} {'(fault → alarm)':>16s} "
+              f"{'(top1 - top2 prob)':>20s} {'(% windows)':>18s}")
+        print(f"  {'-'*18} {'-'*18} {'-'*16} {'-'*20} {'-'*18}")
+        for variant, m in results.items():
+            far   = m.get('false_alarm_rate')
+            dr    = m.get('detection_rate')
+            margin = m.get('mean_top2_margin')
+            ambig  = m.get('frac_ambiguous')
+            far_str    = f"{far:.4f} ({far*100:.1f}%)"       if far    is not None else "N/A"
+            dr_str     = f"{dr:.4f} ({dr*100:.1f}%)"         if dr     is not None else "N/A"
+            margin_str = f"{margin:.4f} ({margin*100:.1f}pp)" if margin is not None else "N/A"
+            ambig_str  = f"{ambig*100:.1f}%"                  if ambig  is not None else "N/A"
+            print(f"  {variant:<18s} {far_str:>18s} {dr_str:>16s} "
+                  f"{margin_str:>20s} {ambig_str:>18s}")
 
     print(f"\n{'='*120}")
     print("  Evaluation complete.")
