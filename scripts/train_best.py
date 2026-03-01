@@ -172,12 +172,19 @@ def train_one_variant(model_name, config, windows_dir, params_dir, output_dir, d
     # ------------------------------------------------------------------
     # 3. Build DataLoaders
     # ------------------------------------------------------------------
-    batch_size = config.batch_size
+    batch_size   = config.batch_size
+    num_workers  = config.num_workers
+    persistent   = num_workers > 0
+    pin          = device.type == 'cuda'
     _g = torch.Generator().manual_seed(seed)
     train_loader = DataLoader(TensorDataset(X_train, y_train),
-                              batch_size=batch_size, shuffle=True, generator=_g)
+                              batch_size=batch_size, shuffle=True, generator=_g,
+                              num_workers=num_workers, persistent_workers=persistent,
+                              pin_memory=pin)
     test_loader  = DataLoader(TensorDataset(X_test, y_test),
-                              batch_size=batch_size, shuffle=False)
+                              batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, persistent_workers=persistent,
+                              pin_memory=pin)
 
     # ------------------------------------------------------------------
     # 4. Build model
