@@ -739,18 +739,19 @@ def _sheet_fault_diagnosis_time(wb, results):
         cell.font = Font(bold=True)
         cell.fill = PatternFill('solid', fgColor=color)
         cell.alignment = Alignment(horizontal='center')
-        ws.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + 5)
+        ws.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + 7)
         sub_headers = [
             'FDiagT\nMean \u00b1 Std',
             '1st Diag\nMean \u00b1 Std',
-            'Trials', 'Correct\nDiag (%)', '1st Diag\nCorrect (%)', 'Coverage (%)\n(any conf. call)',
+            'Trials', 'Correct\nDiag (%)', 'Correct/Diag\nWindows',
+            '1st Diag\nCorrect (%)', 'Coverage (%)\n(any conf. call)', 'Diag/Total\nWindows',
         ]
         for offset, sub_h in enumerate(sub_headers):
             c2 = ws.cell(row=2, column=col + offset, value=sub_h)
             c2.font = Font(bold=True)
             c2.fill = PatternFill('solid', fgColor=color)
             c2.alignment = Alignment(horizontal='center', wrap_text=True)
-        col += 6
+        col += 8
 
     ws.cell(row=2, column=1, value='Fault')
     ws.cell(row=2, column=1).font = Font(bold=True)
@@ -774,6 +775,9 @@ def _sheet_fault_diagnosis_time(wb, results):
             fd_std   = tm.get('first_diag_std')
             fdc_rate = tm.get('first_diag_correct_rate')
             coverage = tm.get('coverage')
+            n_diag_windows       = tm.get('n_diag_windows', 0)
+            n_correct_windows    = tm.get('n_correct_windows', 0)
+            n_post_fault_windows = tm.get('n_post_fault_windows', 0)
             fdiag_ms = (f'{mean:.1f} \u00b1 {std:.1f}'
                         if mean is not None and std is not None else None)
             fd_ms    = (f'{fd_mean:.1f} \u00b1 {fd_std:.1f}'
@@ -782,11 +786,13 @@ def _sheet_fault_diagnosis_time(wb, results):
             ws.cell(row=r, column=col + 1, value=fd_ms)
             ws.cell(row=r, column=col + 2, value=f'{n_diag}/{n_tot}')
             ws.cell(row=r, column=col + 3, value=round(acc * 100, 1)      if acc      is not None else None)
-            ws.cell(row=r, column=col + 4, value=round(fdc_rate * 100, 1) if fdc_rate is not None else None)
-            ws.cell(row=r, column=col + 5, value=round(coverage * 100, 1) if coverage is not None else None)
-            for c2 in range(col, col + 6):
+            ws.cell(row=r, column=col + 4, value=f'{n_correct_windows}/{n_diag_windows}')
+            ws.cell(row=r, column=col + 5, value=round(fdc_rate * 100, 1) if fdc_rate is not None else None)
+            ws.cell(row=r, column=col + 6, value=round(coverage * 100, 1) if coverage is not None else None)
+            ws.cell(row=r, column=col + 7, value=f'{n_diag_windows}/{n_post_fault_windows}')
+            for c2 in range(col, col + 8):
                 ws.cell(row=r, column=c2).alignment = Alignment(horizontal='center')
-            col += 6
+            col += 8
 
     # Overall rows
     for row_label, skip15 in [('Overall', False), ('Overall*', True)]:
@@ -817,11 +823,13 @@ def _sheet_fault_diagnosis_time(wb, results):
             ws.cell(row=r, column=col + 1, value=fd_ms)
             ws.cell(row=r, column=col + 2, value=f'{n_diag}/{n_tot}')
             ws.cell(row=r, column=col + 3, value=round(n_correct_windows / n_diag_windows * 100, 1) if n_diag_windows else None)
-            ws.cell(row=r, column=col + 4, value=round(n_first_correct / n_tot * 100, 1)            if n_tot          else None)
-            ws.cell(row=r, column=col + 5, value=round(n_diag_windows / n_post_fault_windows * 100, 1) if n_post_fault_windows else None)
-            for c2 in range(col, col + 6):
+            ws.cell(row=r, column=col + 4, value=f'{n_correct_windows}/{n_diag_windows}')
+            ws.cell(row=r, column=col + 5, value=round(n_first_correct / n_tot * 100, 1)            if n_tot          else None)
+            ws.cell(row=r, column=col + 6, value=round(n_diag_windows / n_post_fault_windows * 100, 1) if n_post_fault_windows else None)
+            ws.cell(row=r, column=col + 7, value=f'{n_diag_windows}/{n_post_fault_windows}')
+            for c2 in range(col, col + 8):
                 ws.cell(row=r, column=c2).alignment = Alignment(horizontal='center')
-            col += 6
+            col += 8
 
     note_row = r + 1
     ws.cell(row=note_row, column=1, value='* excludes IDV15').font = Font(italic=True)
