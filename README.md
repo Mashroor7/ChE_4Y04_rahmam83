@@ -326,3 +326,36 @@ python scripts/evaluate.py --model wavelet_kan --config configs/sensitivity_wind
 python scripts/sensitivity_window.py --model wavelet_kan
 ```
 No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by window-size label. Output to `window_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per window size (`w1`, `w3`, `w5`, `w7`, `w9`) instead of per model.
+
+### Quantity-of-Data Sweep
+
+Varies the total number of runs per IDV across `{50, 100, 150, 200}`, with the 80:20 train/test split held fixed (no validation split, no re-tuning). Like the window-size sweep, this **does** require retraining — a different number of training runs changes what the model sees and therefore its weights. Unlike the threshold sweep, it also requires re-running `run_pipeline.py` and `create_windows.py` for each new run count, since the data splits must be regenerated.
+
+Hyperparameters are **not** re-tuned per run count; the same `best_params.json` from Experiment 1 (`results_N50_tr30_v10_te10`) is reused for all four points. This isolates the effect of data quantity from confounding hyperparameter-search variance.
+
+The N=200 point is identical to Experiment 2 (`results_N200_tr160_v0_te40`) and reuses those already-computed results — no extra training needed.
+
+**Data points and auto-derived directories:**
+
+| N   | Train | Val | Test | Config                              | Processed data dir                  | Results dir                   |
+|-----|-------|-----|------|-------------------------------------|-------------------------------------|-------------------------------|
+| 50  | 40    | 0   | 10   | `configs/sensitivity_quantity_50.yaml`  | `data/processed_N50_tr40_v0_te10`  | `results_N50_tr40_v0_te10`    |
+| 100 | 80    | 0   | 20   | `configs/sensitivity_quantity_100.yaml` | `data/processed_N100_tr80_v0_te20` | `results_N100_tr80_v0_te20`   |
+| 150 | 120   | 0   | 30   | `configs/sensitivity_quantity_150.yaml` | `data/processed_N150_tr120_v0_te30`| `results_N150_tr120_v0_te30`  |
+| 200 | 160   | 0   | 40   | `configs/config.yaml` *(Exp 2)*     | `data/processed_N200_tr160_v0_te40`| `results_N200_tr160_v0_te40` ✓|
+
+**Run order per N** (repeat for N = 50, 100, 150; skip 200 — already done as Experiment 2):
+
+```bash
+# Replace {N} with 50, 100, or 150
+python scripts/run_pipeline.py    --config configs/sensitivity_quantity_{N}.yaml
+python scripts/create_windows.py  --config configs/sensitivity_quantity_{N}.yaml
+python scripts/train_best.py --model wavelet_kan --config configs/sensitivity_quantity_{N}.yaml --params-dir results_N50_tr30_v10_te10
+python scripts/evaluate.py   --model wavelet_kan --config configs/sensitivity_quantity_{N}.yaml
+```
+
+**Once all four run counts have `eval_metrics.json`, aggregate them:**
+```bash
+python scripts/sensitivity_quantity.py --model wavelet_kan
+```
+No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by run-count label. Output to `quantity_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per run count (`N50`, `N100`, `N150`, `N200`) instead of per model.
