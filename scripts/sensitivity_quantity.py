@@ -22,6 +22,7 @@ from scripts.evaluate import (
 )
 
 DEFAULT_CONFIGS = [
+    'configs/sensitivity_quantity_15.yaml',
     'configs/sensitivity_quantity_25.yaml',
     'configs/sensitivity_quantity_50.yaml',
     'configs/sensitivity_quantity_100.yaml',
