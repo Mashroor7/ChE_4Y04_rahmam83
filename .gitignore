@@ -9,6 +9,8 @@ data/
 
 # Results files
 results_*/
+*.xlsx
+*.zip
 
 # Smoke Tests for Det and Diag Times
 tests/smoke_test_*/
@@ -25,4 +27,3 @@ venv/
 .DS_Store
 Thumbs.db
 *.npz
-window_sensitivity_wavelet_kan.xlsx
