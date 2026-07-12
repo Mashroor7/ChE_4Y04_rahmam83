@@ -329,9 +329,11 @@ No recomputation needed here — each `eval_metrics.json` already has everything
 
 ### Quantity-of-Data Sweep
 
-Varies the total number of runs per IDV across `{15, 25, 50, 100, 150, 200}`, with the 80:20 train/test split held fixed (no validation split, no re-tuning). Like the window-size sweep, this **does** require retraining — a different number of training runs changes what the model sees and therefore its weights. Unlike the threshold sweep, it also requires re-running `run_pipeline.py` and `create_windows.py` for each new run count, since the data splits must be regenerated.
+Varies the total number of runs per IDV across `{5, 15, 25, 50, 100, 150, 200}`, with the 80:20 train/test split held fixed (no validation split, no re-tuning). Like the window-size sweep, this **does** require retraining — a different number of training runs changes what the model sees and therefore its weights. Unlike the threshold sweep, it also requires re-running `run_pipeline.py` and `create_windows.py` for each new run count, since the data splits must be regenerated.
 
-Hyperparameters are **not** re-tuned per run count; the same `best_params.json` from Experiment 1 (`results_N50_tr30_v10_te10`) is reused for all six points. This isolates the effect of data quantity from confounding hyperparameter-search variance.
+Hyperparameters are **not** re-tuned per run count; the same `best_params.json` from Experiment 1 (`results_N50_tr30_v10_te10`) is reused for all seven points. This isolates the effect of data quantity from confounding hyperparameter-search variance.
+
+At N=5 (4 train runs/IDV, 1 test run/IDV), this is genuinely a low-data, high-variance regime — the test metric per IDV comes from a single held-out trajectory, so treat it as a rough signal rather than a precise estimate. This is the point of the sweep at this end: to find where the model's performance actually starts to degrade.
 
 The N=200 point is identical to Experiment 2 (`results_N200_tr160_v0_te40`) and reuses those already-computed results — no extra training needed.
 
@@ -339,6 +341,7 @@ The N=200 point is identical to Experiment 2 (`results_N200_tr160_v0_te40`) and 
 
 | N   | Train | Val | Test | Config                              | Processed data dir                  | Results dir                   |
 |-----|-------|-----|------|-------------------------------------|-------------------------------------|-------------------------------|
+| 5   | 4     | 0   | 1    | `configs/sensitivity_quantity_5.yaml`   | `data/processed_N5_tr4_v0_te1`     | `results_N5_tr4_v0_te1`       |
 | 15  | 12    | 0   | 3    | `configs/sensitivity_quantity_15.yaml`  | `data/processed_N15_tr12_v0_te3`   | `results_N15_tr12_v0_te3`     |
 | 25  | 20    | 0   | 5    | `configs/sensitivity_quantity_25.yaml`  | `data/processed_N25_tr20_v0_te5`   | `results_N25_tr20_v0_te5`     |
 | 50  | 40    | 0   | 10   | `configs/sensitivity_quantity_50.yaml`  | `data/processed_N50_tr40_v0_te10`  | `results_N50_tr40_v0_te10`    |
@@ -346,18 +349,18 @@ The N=200 point is identical to Experiment 2 (`results_N200_tr160_v0_te40`) and 
 | 150 | 120   | 0   | 30   | `configs/sensitivity_quantity_150.yaml` | `data/processed_N150_tr120_v0_te30`| `results_N150_tr120_v0_te30`  |
 | 200 | 160   | 0   | 40   | `configs/config.yaml` *(Exp 2)*     | `data/processed_N200_tr160_v0_te40`| `results_N200_tr160_v0_te40` ✓|
 
-**Run order per N** (repeat for N = 15, 25, 50, 100, 150; skip 200 — already done as Experiment 2):
+**Run order per N** (repeat for N = 5, 15, 25, 50, 100, 150; skip 200 — already done as Experiment 2):
 
 ```bash
-# Replace {N} with 15, 25, 50, 100, or 150
+# Replace {N} with 5, 15, 25, 50, 100, or 150
 python scripts/run_pipeline.py    --config configs/sensitivity_quantity_{N}.yaml
 python scripts/create_windows.py  --config configs/sensitivity_quantity_{N}.yaml
 python scripts/train_best.py --model wavelet_kan --config configs/sensitivity_quantity_{N}.yaml --params-dir results_N50_tr30_v10_te10
 python scripts/evaluate.py   --model wavelet_kan --config configs/sensitivity_quantity_{N}.yaml
 ```
 
-**Once all six run counts have `eval_metrics.json`, aggregate them:**
+**Once all seven run counts have `eval_metrics.json`, aggregate them:**
 ```bash
 python scripts/sensitivity_quantity.py --model wavelet_kan
 ```
-No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by run-count label. Output to `quantity_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per run count (`N15`, `N25`, `N50`, `N100`, `N150`, `N200`) instead of per model.
+No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by run-count label. Output to `quantity_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per run count (`N5`, `N15`, `N25`, `N50`, `N100`, `N150`, `N200`) instead of per model.
