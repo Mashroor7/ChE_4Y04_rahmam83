@@ -2,7 +2,7 @@
 # Quantity-of-data sensitivity analysis: aggregates already-computed eval_metrics.json
 # from per-run-count experiment configs into one comparison workbook.
 # Usage: python scripts/sensitivity_quantity.py --model wavelet_kan
-#        python scripts/sensitivity_quantity.py --model wavelet_kan --configs configs/sensitivity_quantity_50.yaml,...
+#        python scripts/sensitivity_quantity.py --model wavelet_kan --configs configs/sensitivity_quantity_25.yaml,...
 
 import sys
 import json
@@ -22,6 +22,7 @@ from scripts.evaluate import (
 )
 
 DEFAULT_CONFIGS = [
+    'configs/sensitivity_quantity_25.yaml',
     'configs/sensitivity_quantity_50.yaml',
     'configs/sensitivity_quantity_100.yaml',
     'configs/sensitivity_quantity_150.yaml',
