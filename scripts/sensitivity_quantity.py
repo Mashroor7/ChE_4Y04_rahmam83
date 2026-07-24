@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # Quantity-of-data sensitivity analysis: aggregates already-computed eval_metrics.json
-# from per-run-count experiment configs into one comparison workbook.
+# from per-train-size experiment configs (fixed N=200, varying train/test split) into
+# one comparison workbook.
 # Usage: python scripts/sensitivity_quantity.py --model wavelet_kan
-#        python scripts/sensitivity_quantity.py --model wavelet_kan --configs configs/sensitivity_quantity_25.yaml,...
+#        python scripts/sensitivity_quantity.py --model wavelet_kan --configs configs/sensitivity_quantity_tr40.yaml,...
 
 import sys
 import json
@@ -22,22 +23,21 @@ from scripts.evaluate import (
 )
 
 DEFAULT_CONFIGS = [
-    'configs/sensitivity_quantity_5.yaml',
-    'configs/sensitivity_quantity_15.yaml',
-    'configs/sensitivity_quantity_25.yaml',
-    'configs/sensitivity_quantity_50.yaml',
-    'configs/sensitivity_quantity_100.yaml',
-    'configs/sensitivity_quantity_150.yaml',
-    'configs/config.yaml',              # N=200 baseline (Experiment 2)
+    'configs/config.yaml',               # tr160 baseline (Experiment 2)
+    'configs/sensitivity_quantity_tr80.yaml',
+    'configs/sensitivity_quantity_tr40.yaml',
+    'configs/sensitivity_quantity_tr20.yaml',
+    'configs/sensitivity_quantity_tr10.yaml',
+    'configs/sensitivity_quantity_tr5.yaml',
 ]
 
 
 def load_quantity_results(config_paths: list[str], model: str) -> dict:
-    """Load eval_metrics.json for `model` from each config's results_dir; returns {'N{total}': metrics_dict}."""
+    """Load eval_metrics.json for `model` from each config's results_dir; returns {'tr{train}': metrics_dict}."""
     results = {}
     for config_path in config_paths:
         config = load_config(config_path)
-        label = f"N{config.total_runs}"
+        label = f"tr{config.train_runs}"
         metrics_path = Path(config.results_dir) / model / 'eval_metrics.json'
         if not metrics_path.exists():
             print(f"  WARNING: {metrics_path} not found — skipping {label}")
@@ -72,7 +72,7 @@ def main():
                         help='Variant to compare across run counts')
     parser.add_argument('--configs', type=str,
                         default=','.join(DEFAULT_CONFIGS),
-                        help='Comma-separated config paths, one per run count (ascending order)')
+                        help='Comma-separated config paths, one per train size (descending order)')
     parser.add_argument('--out', type=str, default=None,
                         help='Output xlsx path (default: quantity_sensitivity_<model>.xlsx)')
     args = parser.parse_args()
