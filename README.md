@@ -325,15 +325,12 @@ python scripts/evaluate.py --model wavelet_kan --config configs/sensitivity_wind
 ```bash
 python scripts/sensitivity_window.py --model wavelet_kan
 ```
-No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by window-size label. Output to `window_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per window size (`w1`, `w3`, `w5`, `w7`, `w9`) instead of per model.
 
 ### Quantity-of-Data Sweep
 
 Fixes the total number of runs per IDV at `N=200` and varies the **training set size** across `{160, 80, 40, 20, 10, 5}`, with the test set absorbing the remainder (`test = 200 - train`, no validation split, no re-tuning). Like the window-size sweep, this **does** require retraining — a different number of training runs changes what the model sees and therefore its weights. Unlike the threshold sweep, it also requires re-running `run_pipeline.py` and `create_windows.py` for each new train size, since the data splits must be regenerated.
 
 Hyperparameters are **not** re-tuned per point; the same `best_params.json` from Experiment 1 (`results_N50_tr30_v10_te10`) is reused for all six points. This isolates the effect of training-set size from confounding hyperparameter-search variance.
-
-At train=5 (5 train runs/IDV, 195 test runs/IDV), this is genuinely a low-data, high-variance regime — the model sees only a handful of trajectories per fault class, so treat it as a rough signal rather than a precise estimate. This is the point of the sweep at this end: to find where the model's performance actually starts to degrade.
 
 The train=160 point is identical to Experiment 2 (`results_N200_tr160_v0_te40`) and reuses those already-computed results — no extra training needed.
 
@@ -362,4 +359,3 @@ python scripts/evaluate.py   --model wavelet_kan --config configs/sensitivity_qu
 ```bash
 python scripts/sensitivity_quantity.py --model wavelet_kan
 ```
-No recomputation needed here — each `eval_metrics.json` already has everything, so this just loads and re-keys by train-size label. Output to `quantity_sensitivity_<model>.xlsx` in the repo root (spans multiple experiment folders, so it doesn't belong inside any one of them), with the same six sheets as `model_evaluation.xlsx` but one column per train size (`tr160`, `tr80`, `tr40`, `tr20`, `tr10`, `tr5`) instead of per model.
